@@ -1,5 +1,8 @@
 import os
 import hashlib
+import prs_lib
+import prs_utility
+import uuid
 import mixin_config
 from mixin_api import MIXIN_API
 from mixin_ws_api import MIXIN_WS_API
@@ -40,6 +43,14 @@ import random, string
 # PASSWORD = 'default'
 
 # db = DataBaseCursor.DBC()
+
+client = prs_lib.PRS({
+  'env': 'dev',
+  'private_key': '01e05107e3141083f66aa2ec5fa78d095115a912ca17148813b87d4313115837',
+  'address': 'acd8960a52de7017059cfd6c7113f073fad2a2a2e',
+  'debug': True,
+})
+
 
 app = Flask(__name__) # Start Flask
 api = Api(app)
@@ -113,16 +124,19 @@ def on_message(ws, message):
     f = gzip.GzipFile(mode="rb", fileobj=inbuffer)
     rdata_injson = f.read()
     rdata_obj = json.loads(rdata_injson)
-    print("-------json object begin---------")
-    print(rdata_obj)
-    print("-------json object end---------")
+    # print("-------json object begin---------")
+    # print(time.time())
+    # print(rdata_obj)
+    # print("-------json object end---------")
     action = rdata_obj["action"]
 
     if rdata_obj["data"] is not None:
-        print("data in message:",rdata_obj["data"])
+        # print("data in message:", rdata_obj["data"])
+        pass
 
     if rdata_obj["data"] is not None and rdata_obj["data"]["category"] is not None:
-        print(rdata_obj["data"]["category"])
+        # print(rdata_obj["data"]["category"])
+        pass
 
     if action == "CREATE_MESSAGE":
 
@@ -143,13 +157,66 @@ def on_message(ws, message):
 
         if categoryindata == "PLAIN_TEXT":
             realData = realData.decode('utf-8')
+            print("_____-------______")
             print("dataindata",realData)
+            print(type(realData))
+
             if dataindata:
                 MIXIN_WS_API.sendUserText(ws, conversationId, userId, "按下列按钮以进行操作")
+                trace = str(uuid.uuid1())
+                # 储存到数据库
                 # ifsig = MIXIN_WS_API.sendUserAppButton(ws, conversationId, userId, "www.baidu.com", 'heppy')
                 a = MIXIN_WS_API.sendUserPayAppButton(ws, conversationId, userId, 'CNB', CNB, 1)
                 # MIXIN_WS_API.sendAppCard(ws, conversationId, userId, CNB, 1, '', 'lalaladifjsof', 'none', memo="123456")
-                # MIXIN_WS_API.
+                pay_link = "https://mixin.one/pay?recipient="+mixin_config.client_id+"&asset="+CNB+"&amount="+"1"+"&trace="+trace+"&memo=testlink"
+                MIXIN_WS_API.sendUserText(ws, conversationId, userId, pay_link)
+
+                time.sleep(1) #等待5分钟，后期应该成轮询
+
+                signer2paylink = mixin_api.verifyPayment(CNB, mixin_config.client_id, "1", trace)
+                # print(signer2paylink.get("data").get('status'))
+
+                if True or signer2paylink.get("data").get("status") == "paid":
+                    print('1111111111111111111111111111')
+                    # 更改 数据库 user表单 isalreadysign 字段 为 True
+
+                    texthash = prs_utility.keccak256(text=realData)
+                    print(texthash)
+                    print('222222222222222222222222222222')
+                    # 根据 PRS 协议组合 block data, 并且使用 privateKey 进行签名
+                    data = {
+                        'file_hash': texthash,
+                    }
+
+                    private_key = '01e05107e3141083f66aa2ec5fa78d095115a912ca17148813b87d4313115837'
+
+                    sig = prs_utility.sign_block_data(data, private_key)
+
+                    post_url = 'https://beta.press.one/api/v2/datasign'
+
+                    payload = {
+                        'user_address': 'acd8960a52de7017059cfd6c7113f073fad2a2a2e',
+                        'type': 'PUBLISH:2',
+                        'meta': {
+                            'uris': texthash,
+                            'mime': 'text/markdown;UTF-8'
+                        },
+                        'data': data,
+                        'hash': prs_utility.hash_block_data(data),
+                        'signature': sig
+                    }
+                    print('333333333333333333333333333333333')
+                    req = requests.post(post_url, json=payload)
+                    print(req)
+                    print('44444444444444444444444444444')
+                    print('signature:', sig)
+                    print('555555555555555555555555555555555555')
+
+
+
+                else:
+                    MIXIN_WS_API.sendUserText(ws, conversationId, userId, pay_link)
+
 
 
 
