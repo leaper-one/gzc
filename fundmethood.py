@@ -51,6 +51,7 @@ def genAPaylink(trace, memo='ddd'):
 
 '''
 ！不完善，未能启动
+发现问题：所用 p1私钥和地址 应该重新生成
 '''
 def genAPressSignOfContra(userid, signer2, data):
     texthash = prs_utility.keccak256(text=userid+'\\n'+signer2+'\\n'+data)
