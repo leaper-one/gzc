@@ -1,19 +1,12 @@
 import os
 import hashlib
-import prs_lib
-import prs_utility
-import uuid
 import mixin_config
+import uuid
 from mixin_api import MIXIN_API
 from mixin_ws_api import MIXIN_WS_API
-
+import prs_utility
 from flask import Flask, render_template, g, request, redirect, session, url_for, flash, Blueprint
 from flask_restful import Api, Resource
-
-from flask_wtf import FlaskForm
-from flask_uploads import UploadSet, configure_uploads, patch_request_class, DEFAULTS, ALL
-# from wtforms import TextField, BooleanField, PasswordField, TextAreaField, validators
-
 from Crypto.PublicKey import RSA
 
 import requests
@@ -22,34 +15,9 @@ import time
 from io import BytesIO
 import base64
 import gzip
+import prs_lib
 
-import csv
-from flask_sqlalchemy import SQLAlchemy
-from contextlib import closing
-
-import prs_utility
-
-from flask_login import LoginManager
-
-
-# import DataBaseCursor
-import random, string
-
-
-# DATABASE = "E:/PRJCT/nbsw/tmp/nbsw.db"
-# DEBUG = True
-# SECRET_KEY = 'nbswl'
-# USERNAME = 'admin'
-# PASSWORD = 'default'
-
-# db = DataBaseCursor.DBC()
-
-client = prs_lib.PRS({
-  'env': 'dev',
-  'private_key': '01e05107e3141083f66aa2ec5fa78d095115a912ca17148813b87d4313115837',
-  'address': 'acd8960a52de7017059cfd6c7113f073fad2a2a2e',
-  'debug': True,
-})
+import fundmethood as fm
 
 
 app = Flask(__name__) # Start Flask
@@ -57,30 +25,22 @@ api = Api(app)
 # app.config.from_object(__name__)
 mixin_api = MIXIN_API(mixin_config)
 
-
-# login_manager = LoginManager(app)
-# app.config['UPLOADED_FILES_DEST'] = os.getcwd() + '/uploads' # 文件存储地址
-# ALLOW_EXTENSIONS = ['md']
-# app.config["SECRET_KEY"] = "sexy0756"
-# app.config['UPLOADED_DEFAULT_URL'] = 'http://127.0.0.1:5000/uploads/'
-# app.config['UPLOADED_FILES_URL'] = 'http://127.0.0.1:5000/uploads/'
-
-
-
-# bp = Blueprint('uploads', __name__, url_prefix='/uploads/')
-# files = UploadSet('files', ALL)
-# configure_uploads(app, files)
-# patch_request_class(app)
-
 '''
 关键账号
 '''
 LPR = '4747badf-0f01-41b8-b632-f5e3f15245fc'
 
 '''
-资产
+资产编号
 '''
 CNB = '965e5c6e-434c-3fa9-b780-c50f43cd955c'
+
+client = prs_lib.PRS({
+  'env': 'dev',
+  'private_key': '01e05107e3141083f66aa2ec5fa78d095115a912ca17148813b87d4313115837',
+  'address': 'acd8960a52de7017059cfd6c7113f073fad2a2a2e',
+  'debug': True,
+})
 
 '''
 必要加密函数
@@ -159,16 +119,19 @@ def on_message(ws, message):
             realData = realData.decode('utf-8')
             print("_____-------______")
             print("dataindata",realData)
-            print(type(realData))
+            # print(type(realData))
 
             if dataindata:
                 MIXIN_WS_API.sendUserText(ws, conversationId, userId, "按下列按钮以进行操作")
-                trace = str(uuid.uuid1())
+                MIXIN_WS_API.sendUserAppButton(ws, conversationId, userId, 'https://172.20.10.2/auth?code=8045c3b7048bd4e1670716ce4503715923613f75ad836b4e3a6ca1c0710ae779&state=', 'test')
+
                 # 储存到数据库
                 # ifsig = MIXIN_WS_API.sendUserAppButton(ws, conversationId, userId, "www.baidu.com", 'heppy')
                 a = MIXIN_WS_API.sendUserPayAppButton(ws, conversationId, userId, 'CNB', CNB, 1)
                 # MIXIN_WS_API.sendAppCard(ws, conversationId, userId, CNB, 1, '', 'lalaladifjsof', 'none', memo="123456")
-                pay_link = "https://mixin.one/pay?recipient="+mixin_config.client_id+"&asset="+CNB+"&amount="+"1"+"&trace="+trace+"&memo=testlink"
+                trace = fm.genTrace()
+                pay_link = fm.genAPaylink(trace)
+
                 MIXIN_WS_API.sendUserText(ws, conversationId, userId, pay_link)
 
                 time.sleep(1) #等待5分钟，后期应该成轮询
@@ -176,48 +139,38 @@ def on_message(ws, message):
                 signer2paylink = mixin_api.verifyPayment(CNB, mixin_config.client_id, "1", trace)
                 # print(signer2paylink.get("data").get('status'))
 
-                if True or signer2paylink.get("data").get("status") == "paid":
-                    print('1111111111111111111111111111')
+                if True or signer2paylink.get("data").get("status") == "paid": # 需要更改判断条件
+                    # 获取signer2 的 mixinid
+                    signer2 = ''
                     # 更改 数据库 user表单 isalreadysign 字段 为 True
-
-                    texthash = prs_utility.keccak256(text=realData)
-                    print(texthash)
-                    print('222222222222222222222222222222')
-                    # 根据 PRS 协议组合 block data, 并且使用 privateKey 进行签名
-                    data = {
-                        'file_hash': texthash,
-                    }
-
-                    private_key = '01e05107e3141083f66aa2ec5fa78d095115a912ca17148813b87d4313115837'
-
-                    sig = prs_utility.sign_block_data(data, private_key)
-
-                    post_url = 'https://beta.press.one/api/v2/datasign'
-
-                    payload = {
-                        'user_address': 'acd8960a52de7017059cfd6c7113f073fad2a2a2e',
-                        'type': 'PUBLISH:2',
-                        'meta': {
-                            'uris': texthash,
-                            'mime': 'text/markdown;UTF-8'
-                        },
-                        'data': data,
-                        'hash': prs_utility.hash_block_data(data),
-                        'signature': sig
-                    }
-                    print('333333333333333333333333333333333')
-                    req = requests.post(post_url, json=payload)
-                    print(req)
-                    print('44444444444444444444444444444')
-                    print('signature:', sig)
-                    print('555555555555555555555555555555555555')
-
+                    pub_sign = fm.genAPressSignOfContra(userId,signer2,realData)
+                    print(pub_sign)
 
 
                 else:
                     MIXIN_WS_API.sendUserText(ws, conversationId, userId, pay_link)
 
 
+@app.route('/')
+def index():
+    return 'hello'
+
+# 一个 请求 回复的实例 https://mixin.one/auth?code=8045c3b7048bd4e1670716ce4503715923613f75ad836b4e3a6ca1c0710ae779&state=
+'''
+! 未完成
+https://mixin-network.gitbook.io/mixin-network-cn/messenger-ying-yong-kai-fa/huo-qu-messenger-yong-hu-de-xin-xi
+#获取messenger用户的信息
+
+ 一个 请求 回复的实例 https://mixin.one/auth?code=8045c3b7048bd4e1670716ce4503715923613f75ad836b4e3a6ca1c0710ae779&state=
+以下方法 用于获取实例中的code
+如有需要改动机器人跳转 OAuth_redirect url ，请务必联系 tymon
+'''
+@app.route('/auth', methods=['GET'])
+def get_code():
+    if request.method == 'GET':
+        code = request.args['code']
+        print(code)
+    return code
 
 
 if __name__ == "__main__":
