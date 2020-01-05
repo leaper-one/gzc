@@ -117,9 +117,9 @@ class MIXIN_WS_API:
     """
 
     @staticmethod
-    def writeMessage(websocketInstance, action, params):
+    def writeMessage(websocketInstance, action, params, id=str(uuid.uuid1())):
 
-        message = {"id": str(uuid.uuid1()), "action": action, "params": params}
+        message = {"id": id, "action": action, "params": params}
         message_instring = json.dumps(message)
 
         fgz = BytesIO()
@@ -127,6 +127,7 @@ class MIXIN_WS_API:
         gzip_obj.write(message_instring.encode())
         gzip_obj.close()
         websocketInstance.send(fgz.getvalue(), opcode=websocket.ABNF.OPCODE_BINARY)
+
 
     """
     when receive a message, must reply to server
@@ -189,9 +190,9 @@ class MIXIN_WS_API:
     send user a pay button
     """
     @staticmethod
-    def sendUserPayAppButton(webSocketInstance, in_conversation_id, to_user_id, inAssetName, inAssetID, inPayAmount, linkColor="#0CAAF5"):
+    def sendUserPayAppButton(webSocketInstance, in_conversation_id, to_user_id, inAssetName, inAssetID, inPayAmount, trace, memo='', linkColor="#0CAAF5"):
         payLink = "https://mixin.one/pay?recipient=" + mixin_config.client_id + "&asset=" + inAssetID + "&amount=" + str(
-            inPayAmount) + '&trace=' + str(uuid.uuid1()) + '&memo=PRS2CNB'
+            inPayAmount) + '&trace=' + trace + '&memo=' + memo
         btn = '[{"label":"' + inAssetName + '","action":"' + payLink + '","color":"' + linkColor + '"}]'
 
         btn = base64.b64encode(btn.encode('utf-8')).decode(encoding='utf-8')
