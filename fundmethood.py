@@ -44,7 +44,7 @@ def genTrace():
 '''
 生成一个bot收款链接，需出入trace
 '''
-def genAPaylink(trace, memo='ddd'):
+def genAPaylink(trace=genTrace(), memo='1'):
     return "https://mixin.one/pay?recipient="+mixin_config.client_id+"&asset="+CNB+"&amount="+"1"+"&trace="+trace+"&memo="+memo
 
 
