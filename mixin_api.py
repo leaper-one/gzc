@@ -23,7 +23,7 @@ import jwt
 import uuid
 import json
 import requests
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote_plus
 
 
 class MIXIN_API:
@@ -367,18 +367,17 @@ class MIXIN_API:
     """
     Create a GROUP or CONTACT conversation.
     """
-    def createConv(self, category, conversation_id, participants, action, role, user_id, auth_token):
-
+    def createConv(self, category, conversation_id, action, role, user_id, auth_token):
         body = {
             "category": category,
             "conversation_id": conversation_id,
-            "participants": participants,
-            "action": action,
-            "role": role,
-            "user_id": user_id
+            "participants": [{"action":action,
+                              "role":role,
+                              "user_id":user_id,
+                              }]
         }
-
-        return self.__genPostRequest('/conversations', body, auth_token)
+        # return self.__genPostRequest('/conversations', body, auth_token)
+        return self.__genNetworkPostRequest('/conversations', body, auth_token)
 
     """
     Read conversation by conversation_id.
