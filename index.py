@@ -83,6 +83,12 @@ def generateMixinAPI(private_key,pin_token,session_id,user_id,pin,client_secret)
 
 # mixinApiNewUserInstance = generateMixinAPI(private_key, pin_token, session_id, userid, pin,"")
 
+'''
+text 默认值
+'''
+# global text_with_userid
+text_with_userid = None
+
 
 
 try:
@@ -134,12 +140,14 @@ def on_message(ws, message):
             realData = realData.decode('utf-8')
             print("_____-------______")
             print("dataindata",realData)
+            print(userId)
             print("_____-------______")
 
             # print(type(realData))
 
             if dataindata:
-                step1isread = False
+                data = realData
+                text_with_userid = {'userId':userId, 'data':data}
                 MIXIN_WS_API.sendUserText(ws, conversationId, userId, "按下列按钮以付款")
                 # MIXIN_WS_API.sendUserAppButton(ws, conversationId, userId, 'https://172.20.10.2/auth?code=8045c3b7048bd4e1670716ce4503715923613f75ad836b4e3a6ca1c0710ae779&state=', 'test')
 
@@ -165,31 +173,45 @@ def on_message(ws, message):
                     time.sleep(1)
 
         if categoryindata == "PLAIN_CONTACT":
+            # print(locals().keys()
+
+            # MIXIN_WS_API.sendUserText(ws, conversationId, userId, '一个名片')
             print('111111111111')
-            MIXIN_WS_API.sendUserText(ws, conversationId, userId, '一个名片')
+            time.sleep(1)
+            # signer2 = realData.decode('utf-8')['user_id']
             signer2 = eval(realData.decode('utf-8'))['user_id']
             trace2 = fm.genTrace()
-            # print(trace2)
-            # new_conv_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, mixin_config.client_id))
-            '''
-            跪求大神来，解决一下：
-            https://docs.python.org/3.5/library/uuid.html
-            https://developers.mixin.one/api/beta-mixin-message/create-conversation/
-            '''
 
-            a, b = mixin_config.client_id, signer2
-            if a >b:
-                new_conv_id = str(uuid.uuid3(uuid.NAMESPACE_X500, b+a))
-            else:
-                new_conv_id = str(uuid.uuid3(uuid.NAMESPACE_X500, a+b))
-            print(new_conv_id)
-            r= mixin_api.createConv('CONTACT', new_conv_id, 'ADD', '', signer2, '')
-            print(r)
+            # print(signer2)
+            # new_conv_id = str(uuid.uuid1())
+            # print(new_conv_id)
+            # time.sleep(1)
+            # r = mixin_api.createGroup(new_conv_id, 'ADD', userId, signer2)
+            # time.sleep(1)
+            # print(r)
+            MIXIN_WS_API.sendUserText(ws, conversationId, userId, '转发以下支付链接，请对方付款以共证：')
+            MIXIN_WS_API.sendUserText(ws, conversationId, userId, fm.genAPaylink(trace=trace2))
 
-            print('2222222')
+            for i in range(0, 20):
+                # print(mixin_api.verifyPayment(CNB, mixin_config.client_id, "1", trace2).get("data").get("status"))
+                if mixin_api.verifyPayment(CNB, mixin_config.client_id, "1", trace2).get("data").get("status") == "pending":
+                    print('NO')
+                    continue
+                else:
+                    print('YES')
+                    print('222222')
+                    r = fm.sign_text(userId,signer2,text_with_userid.get('data'))
+                    time.sleep(1)
+                    print('333333333')
+                    print(r)
+                    text_with_userid = None
 
+                    print('121212122')
+                    time.sleep(1)
+                    break
+                time.sleep(1)
 
-            # MIXIN_WS_API.sendUserText(ws, conversationId, userId, fm.genAPaylink(trace=trace))
+            print('444444444')
 
 
 if __name__ == "__main__":
