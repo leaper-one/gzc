@@ -21,12 +21,15 @@ import prs_lib
 '''
 关键账号
 '''
-private_key = '01e05107e3141083f66aa2ec5fa78d095115a912ca17148813b87d4313115837'
+private_key = '10caade304e18855f82b5fd1c791c4e9ea78943e6a1a21b47a49405f3d0ee2c4'
+publicKey = '7f14afd69c51cc76cced561c068174e8b2b763067c68199ea253ac80b6a31487489f2bd2927342188c4b2e3528b093bc12432f10ac77b0bf74abd945891c2cc2'
+address = 'f5b47d7dc6dfd87c49c9a69aefed247d314385c5'
 
 '''
 资产编号
 '''
 CNB = '965e5c6e-434c-3fa9-b780-c50f43cd955c'
+
 
 client = prs_lib.PRS({
   'env': 'dev',
@@ -44,38 +47,36 @@ def genTrace():
 '''
 生成一个bot收款链接，需出入trace
 '''
-def genAPaylink(trace=genTrace(), memo='1'):
-    return "https://mixin.one/pay?recipient="+mixin_config.client_id+"&asset="+CNB+"&amount="+"1"+"&trace="+trace+"&memo="+memo
+def genAPaylink(trace=genTrace(), asset=CNB, amount='1', memo='1'):
+    return "https://mixin.one/pay?recipient="+mixin_config.client_id+"&asset="+asset+"&amount="+amount+"&trace="+trace+"&memo="+memo
 
 
 
 '''
-！不完善，未能启动
-发现问题：所用 p1私钥和地址 应该重新生成
+对一个文本签名
 '''
-def genAPressSignOfContra(userid, signer2, data):
-    texthash = prs_utility.keccak256(text=userid+'\\n'+signer2+'\\n'+data)
+def sign_text(userid, signer2, data):
+    texthash = prs_utility.keccak256(text=userid+r'\n'+signer2+r'\n'+data)
 
-    # 根据 PRS 协议组合 block data, 并且使用 privateKey 进行签名
     data = {
         'file_hash': texthash,
     }
 
-    sig = prs_utility.sign_block_data(data, private_key)
-    post_url = 'https://dev.press.one/api/v2/datasign'
+    sig = prs_utility.sign_block_data(data, private_key='10caade304e18855f82b5fd1c791c4e9ea78943e6a1a21b47a49405f3d0ee2c4')
+    post_url = 'https://press.one/api/v2/datasign'
 
     payload = {
-        'user_address': 'acd8960a52de7017059cfd6c7113f073fad2a2a2e',
+        'user_address': 'f5b47d7dc6dfd87c49c9a69aefed247d314385c5',
         'type': 'PUBLISH:2',
         'meta': {
-            'uris': texthash,
+            'uris': '',
             'mime': 'text/markdown;UTF-8'
         },
         'data': data,
         'hash': prs_utility.hash_block_data(data),
-        'signature': sig
+        'signature': sig.get('signature')
     }
 
     req = requests.post(post_url, json=payload)
-    return req
 
+    return req.json()
