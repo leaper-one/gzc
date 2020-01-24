@@ -200,8 +200,9 @@ class MIXIN_API:
             r = requests.post(url, json=body_in_json, headers={"Authorization": "Bearer " + auth_token})
 
         result_obj = r.json()
-        print(result_obj)
         return result_obj
+
+
 
     """
     generate Mixin Network GET http request
@@ -211,7 +212,10 @@ class MIXIN_API:
         url = self.__genUrl(path)
 
         if body is not None:
-            body = urlencode(body)
+            # body = urlencode(body)
+            body = quote_plus(body)
+
+            # body = bytes(urlencode(body), 'utf8')
         else:
             body = ""
 
@@ -366,8 +370,9 @@ class MIXIN_API:
 
     """
     Create a GROUP or CONTACT conversation.
+
     """
-    def createConv(self, category, conversation_id, action, role, user_id, auth_token):
+    def createConv(self, category, conversation_id, action, role, user_id, auth_token=''):
         body = {
             "category": category,
             "conversation_id": conversation_id,
@@ -376,7 +381,24 @@ class MIXIN_API:
                               "user_id":user_id,
                               }]
         }
-        # return self.__genPostRequest('/conversations', body, auth_token)
+        # return self.__genPostRequest('/conversations', body, auth_token)  错误使用，已更改
+        return self.__genNetworkPostRequest('/conversations', body, auth_token)
+
+    def createGroup(self, conversation_id, action, user_id, user_id2, role='', auth_token=''):
+        body = {
+            "category": 'GROUP',
+            "conversation_id": conversation_id,
+            "participants": [{"action":action,
+                              "role":role,
+                              "user_id":user_id,
+                              },
+                             {"action": action,
+                              "role": role,
+                              "user_id": user_id2,
+                              }
+                             ]
+        }
+        # return self.__genPostRequest('/conversations', body, auth_token)  错误使用，已更改
         return self.__genNetworkPostRequest('/conversations', body, auth_token)
 
     """
@@ -384,7 +406,6 @@ class MIXIN_API:
     """
     def getConv(self, conversation_id, auth_token):
         return self.__genGetRequest('/conversations/' + conversation_id, auth_token)
-
 
     """
     ============
@@ -592,6 +613,7 @@ class MIXIN_API:
         }
 
         return self.__genNetworkGetRequest('/external/transactions', body)
+
     def fetchTokenForCreateUser(self, body, url):
         body_in_json = json.dumps(body)
         headers = {
