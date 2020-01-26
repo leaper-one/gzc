@@ -18,6 +18,7 @@ import gzip
 import prs_lib
 
 import fundmethood as fm
+from assets import CNB
 
 
 app = Flask(__name__) # Start Flask
@@ -54,6 +55,9 @@ LPR = '4747badf-0f01-41b8-b632-f5e3f15245fc'
 '''
 CNB = '965e5c6e-434c-3fa9-b780-c50f43cd955c'
 
+'''
+初始化p1
+'''
 client = prs_lib.PRS({
   'env': 'dev',
   'private_key': '01e05107e3141083f66aa2ec5fa78d095115a912ca17148813b87d4313115837',
@@ -61,27 +65,6 @@ client = prs_lib.PRS({
   'debug': True,
 })
 
-'''
-必要加密函数
-'''
-def pubkeyContent(inputContent):
-    contentWithoutHeader = inputContent[len("-----BEGIN PUBLIC KEY-----") + 1:]
-    contentWithoutTail = contentWithoutHeader[:-1 * (len("-----END PUBLIC KEY-----") + 1)]
-    contentWithoutReturn = contentWithoutTail[:64] + contentWithoutTail[65:129] + contentWithoutTail[
-                                                                                  130:194] + contentWithoutTail[195:]
-    return contentWithoutReturn
-
-
-def generateMixinAPI(private_key,pin_token,session_id,user_id,pin,client_secret):
-    mixin_config.private_key       = private_key
-    mixin_config.pin_token         = pin_token
-    mixin_config.pay_session_id    = session_id
-    mixin_config.client_id         = user_id
-    mixin_config.client_secret     = client_secret
-    mixin_config.pay_pin           = pin
-    return MIXIN_API(mixin_config)
-
-# mixinApiNewUserInstance = generateMixinAPI(private_key, pin_token, session_id, userid, pin,"")
 
 '''
 text 默认值
